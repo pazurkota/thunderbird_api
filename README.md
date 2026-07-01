@@ -36,10 +36,14 @@ The backend is written in PHP and split into layers:
 
 - Thunderbird 128+ (Manifest V3, tested on 140.12.0esr)
 - PHP 8.1+ with the `pdo_sqlite` extension
+- [Composer](https://getcomposer.org/)
 
 ## Running the backend
 
 ```bash
+composer install
+cp .env.example .env
+# edit .env and set THUNDERBIRD_API_TOKEN to a random secret
 php -S localhost:8000
 ```
 
@@ -54,12 +58,16 @@ The server listens for `POST /api.php` requests. The `Database/thunderbird.sqlit
 
 ## Configuration
 
-The API token and backend address are defined in two places and must match:
+The API token must match on both sides of the integration:
 
-- `background.js` → `CONFIG.apiUrl`, `CONFIG.apiToken`
-- `Api/ThunderbirdApi.php` → `$secretToken`
-
-> **Note:** the token is currently hardcoded in both files as a development placeholder. Before any production deployment, move it to an environment variable or a configuration file kept outside the repository.
+- **Backend** (`api.php`) — loaded from a `.env` file via [`vlucas/phpdotenv`](https://github.com/vlucas/phpdotenv). Copy `.env.example` to `.env` and set:
+  ```
+  THUNDERBIRD_API_TOKEN=<a long random secret>
+  # THUNDERBIRD_DB_PATH=/absolute/path/to/thunderbird.sqlite   # optional override
+  ```
+  Generate a strong token with, e.g.: `php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"`.
+  `.env` is gitignored and must never be committed. If `THUNDERBIRD_API_TOKEN` is not set, `api.php` responds with a `500` error instead of falling back to a hardcoded value.
+- **Extension** (`background.js`) → `CONFIG.apiUrl`, `CONFIG.apiToken`. Browser extensions cannot read `.env` files at runtime, so the token has to be copied into `background.js` by hand — set it to the same value as `THUNDERBIRD_API_TOKEN`. Since `background.js` is part of the extension source, treat this token as a shared secret between your own Thunderbird profile and your own backend rather than a value safe to publish in a public repository.
 
 ## API contract
 
