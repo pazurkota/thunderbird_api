@@ -16,7 +16,7 @@ class MessageSyncServiceTest extends TestCase
         $service = new MessageSyncService($this->createMock(MessageRepositoryInterface::class), self::TOKEN);
 
         $this->expectException(Exception::class);
-        $this->expectExceptionMessage('Brak autoryzacji. Niepoprawny token API.');
+        $this->expectExceptionMessage('Unauthorized. Invalid API token.');
         $this->expectExceptionCode(401);
 
         $service->handleAuthAndSync(null, ['messages' => []]);
@@ -37,7 +37,7 @@ class MessageSyncServiceTest extends TestCase
         $service = new MessageSyncService($this->createMock(MessageRepositoryInterface::class), self::TOKEN);
 
         $this->expectException(Exception::class);
-        $this->expectExceptionMessage("Zły format danych. Oczekiwano tablicy 'messages'.");
+        $this->expectExceptionMessage("Invalid data format. Expected a 'messages' array.");
         $this->expectExceptionCode(400);
 
         $service->handleAuthAndSync(self::TOKEN, []);

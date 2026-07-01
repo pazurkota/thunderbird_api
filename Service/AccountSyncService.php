@@ -19,11 +19,11 @@ class AccountSyncService
     public function handleAuthAndSync(?string $receivedToken, array $payload): array
     {
         if (!$receivedToken || $receivedToken !== $this->expectedToken) {
-            throw new Exception("Brak autoryzacji. Niepoprawny token API.", 401);
+            throw new Exception("Unauthorized. Invalid API token.", 401);
         }
 
         if (!isset($payload['accounts']) || !is_array($payload['accounts'])) {
-            throw new Exception("Zły format danych wejściowych.", 400);
+            throw new Exception("Invalid input data format.", 400);
         }
 
         $count = $this->repository->syncAccounts($payload['accounts']);

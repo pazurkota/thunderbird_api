@@ -16,7 +16,7 @@ class AccountSyncServiceTest extends TestCase
         $service = new AccountSyncService($this->createMock(AccountRepositoryInterface::class), self::TOKEN);
 
         $this->expectException(Exception::class);
-        $this->expectExceptionMessage('Brak autoryzacji. Niepoprawny token API.');
+        $this->expectExceptionMessage('Unauthorized. Invalid API token.');
         $this->expectExceptionCode(401);
 
         $service->handleAuthAndSync(null, ['accounts' => []]);
@@ -37,7 +37,7 @@ class AccountSyncServiceTest extends TestCase
         $service = new AccountSyncService($this->createMock(AccountRepositoryInterface::class), self::TOKEN);
 
         $this->expectException(Exception::class);
-        $this->expectExceptionMessage('Zły format danych wejściowych.');
+        $this->expectExceptionMessage('Invalid input data format.');
         $this->expectExceptionCode(400);
 
         $service->handleAuthAndSync(self::TOKEN, []);

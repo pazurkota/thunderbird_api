@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "TB Account Sender",
   "version": "1.0",
-  "description": "Wysyła dane kont i wiadomości użytkownika do skryptu PHP",
+  "description": "Sends the user's account and message data to a PHP script",
   "permissions": [
     "accountsRead",
     "messagesRead"
@@ -11,6 +11,6 @@
     "scripts": ["background.js"]
   },
   "action": {
-    "default_title": "Wyślij dane do PHP"
+    "default_title": "Send data to PHP"
   }
 }

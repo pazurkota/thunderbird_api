@@ -63,7 +63,7 @@ class ThunderbirdApi
             } elseif (isset($payload['accounts'])) {
                 $result = $this->accountService->handleAuthAndSync($token, $payload);
             } else {
-                throw new Exception("Nie rozpoznano intencji żądania (brak klucza 'accounts' lub 'messages').", 400);
+                throw new Exception("Unrecognized request intent (missing 'accounts' or 'messages' key).", 400);
             }
 
             return [200, $result];

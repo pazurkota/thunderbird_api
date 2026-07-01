@@ -15,7 +15,7 @@ async function postToApi(payload) {
     });
 
     if (!response.ok) {
-        throw new Error(`Serwer odpowiedział kodem błędu: ${response.status}`);
+        throw new Error(`Server responded with error code: ${response.status}`);
     }
 
     return response.json();
@@ -59,7 +59,7 @@ async function collectRecentMessages(limit) {
                     });
                 }
             } catch (folderError) {
-                console.warn(`[Integration] Nie udało się odczytać folderu ${folder.path}:`, folderError.message);
+                console.warn(`[Integration] Failed to read folder ${folder.path}:`, folderError.message);
             }
         }
     }
@@ -69,7 +69,7 @@ async function collectRecentMessages(limit) {
 }
 
 async function synchronizeAccountsWithExternalApp() {
-    console.log("[Integration] Rozpoczynanie synchronizacji kont...");
+    console.log("[Integration] Starting account synchronization...");
 
     try {
         const accounts = await browser.accounts.list();
@@ -90,14 +90,14 @@ async function synchronizeAccountsWithExternalApp() {
         };
 
         const result = await postToApi(payload);
-        console.log("[Integration] Sukces! Konta zsynchronizowane:", result);
+        console.log("[Integration] Success! Accounts synchronized:", result);
     } catch (error) {
-        console.error("[Integration] Błąd krytyczny podczas synchronizacji kont:", error.message);
+        console.error("[Integration] Critical error during account synchronization:", error.message);
     }
 }
 
 async function synchronizeMessagesWithExternalApp() {
-    console.log("[Integration] Rozpoczynanie synchronizacji wiadomości...");
+    console.log("[Integration] Starting message synchronization...");
 
     try {
         const messages = await collectRecentMessages(CONFIG.maxMessages);
@@ -109,9 +109,9 @@ async function synchronizeMessagesWithExternalApp() {
         };
 
         const result = await postToApi(payload);
-        console.log("[Integration] Sukces! Wiadomości zsynchronizowane:", result);
+        console.log("[Integration] Success! Messages synchronized:", result);
     } catch (error) {
-        console.error("[Integration] Błąd krytyczny podczas synchronizacji wiadomości:", error.message);
+        console.error("[Integration] Critical error during message synchronization:", error.message);
     }
 }
 
@@ -121,21 +121,21 @@ async function synchronizeAll() {
 }
 
 browser.runtime.onStartup.addListener(() => {
-    console.log("Uruchomiono Thunderbirda – wywoływanie auto-sync.");
+    console.log("Thunderbird started – triggering auto-sync.");
     synchronizeAll();
 });
 
 browser.accounts.onCreated.addListener((account) => {
-    console.log(`Wykryto nowe konto: ${account.name}. Uruchamianie synchronizacji...`);
+    console.log(`New account detected: ${account.name}. Starting synchronization...`);
     synchronizeAccountsWithExternalApp();
 });
 
 browser.messages.onNewMailReceived.addListener((folder, messages) => {
-    console.log(`Wykryto nową pocztę w folderze ${folder.path}. Uruchamianie synchronizacji wiadomości...`);
+    console.log(`New mail detected in folder ${folder.path}. Starting message synchronization...`);
     synchronizeMessagesWithExternalApp();
 });
 
 browser.action.onClicked.addListener(() => {
-    console.log("Ręczne żądanie synchronizacji użytkownika.");
+    console.log("Manual synchronization request from user.");
     synchronizeAll();
 });

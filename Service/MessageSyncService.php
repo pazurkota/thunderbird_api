@@ -19,18 +19,18 @@ class MessageSyncService
     public function handleAuthAndSync(?string $receivedToken, array $payload): array
     {
         if (!$receivedToken || $receivedToken !== $this->expectedToken) {
-            throw new Exception("Brak autoryzacji. Niepoprawny token API.", 401);
+            throw new Exception("Unauthorized. Invalid API token.", 401);
         }
 
         if (!isset($payload['messages']) || !is_array($payload['messages'])) {
-            throw new Exception("Zły format danych. Oczekiwano tablicy 'messages'.", 400);
+            throw new Exception("Invalid data format. Expected a 'messages' array.", 400);
         }
 
         $newSaved = $this->repository->saveLastestMessages($payload['messages']);
 
         return [
             'status' => 'success',
-            'message' => 'Wiadomości zostały zsynchronizowane.',
+            'message' => 'Messages have been synchronized.',
             'new_messages_saved' => $newSaved,
             'server_time' => date('Y-m-d H:i:s')
         ];
