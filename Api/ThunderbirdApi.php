@@ -1,60 +1,83 @@
 <?php
 
-require_once __DIR__ . '/../Database/Database.php';
-
-require_once __DIR__ . '/../Interface/AccountRepositoryInterface.php';
-require_once __DIR__ . '/../Repository/SqliteAccountRepository.php';
-require_once __DIR__ . '/../Service/AccountSyncService.php';
-
-require_once __DIR__ . '/../Interface/MessageRepositoryInterface.php';
-require_once __DIR__ . '/../Repository/SqliteMessageRepository.php';
-require_once __DIR__ . '/../Service/MessageSyncService.php';
+namespace App\Api;
 
 use App\Database\Database;
 use App\Repositories\SqliteAccountRepository;
 use App\Repositories\SqliteMessageRepository;
 use App\Services\AccountSyncService;
 use App\Services\MessageSyncService;
+use Exception;
 
-$secretToken = 'pazurkota_super_secret_api_key_2026';
-$sqliteDbPath = __DIR__ . '/../Database/thunderbird.sqlite';
+class ThunderbirdApi
+{
+    private AccountSyncService $accountService;
+    private MessageSyncService $messageService;
 
-$pdo = Database::connect($sqliteDbPath);
-
-$accountRepo = new SqliteAccountRepository($pdo);
-$accountService = new AccountSyncService($accountRepo, $secretToken);
-
-$messageRepo = new SqliteMessageRepository($pdo);
-$messageService = new MessageSyncService($messageRepo, $secretToken);
-
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, X-Thunderbird-Token");
-header("Content-Type: application/json");
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit(200); }
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(['error' => 'Method Not Allowed']);
-    exit;
-}
-
-$headers = getallheaders();
-$token = $headers['X-Thunderbird-Token'] ?? null;
-$payload = json_decode(file_get_contents('php://input'), true) ?? [];
-
-try {
-    if (isset($payload['messages'])) {
-        $result = $messageService->handleAuthAndSync($token, $payload);
-    } elseif (isset($payload['accounts'])) {
-        $result = $accountService->handleAuthAndSync($token, $payload);
-    } else {
-        throw new Exception("Nie rozpoznano intencji żądania (brak klucza 'accounts' lub 'messages').", 400);
+    public function __construct(AccountSyncService $accountService, MessageSyncService $messageService)
+    {
+        $this->accountService = $accountService;
+        $this->messageService = $messageService;
     }
 
-    http_response_code(200);
-    echo json_encode($result);
-} catch (Exception $e) {
-    http_response_code($e->getCode() >= 400 ? $e->getCode() : 500);
-    echo json_encode(['error' => $e->getMessage()]);
+    public static function create(string $secretToken, string $sqliteDbPath): self
+    {
+        $pdo = Database::connect($sqliteDbPath);
+
+        $accountService = new AccountSyncService(new SqliteAccountRepository($pdo), $secretToken);
+        $messageService = new MessageSyncService(new SqliteMessageRepository($pdo), $secretToken);
+
+        return new self($accountService, $messageService);
+    }
+
+    public function run(): void
+    {
+        $this->sendCorsHeaders();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+            http_response_code(200);
+            exit;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method Not Allowed']);
+            exit;
+        }
+
+        $headers = getallheaders();
+        $token = $headers['X-Thunderbird-Token'] ?? null;
+        $payload = json_decode(file_get_contents('php://input'), true) ?? [];
+
+        [$httpCode, $result] = $this->dispatch($token, $payload);
+
+        http_response_code($httpCode);
+        echo json_encode($result);
+    }
+
+    public function dispatch(?string $token, array $payload): array
+    {
+        try {
+            if (isset($payload['messages'])) {
+                $result = $this->messageService->handleAuthAndSync($token, $payload);
+            } elseif (isset($payload['accounts'])) {
+                $result = $this->accountService->handleAuthAndSync($token, $payload);
+            } else {
+                throw new Exception("Nie rozpoznano intencji żądania (brak klucza 'accounts' lub 'messages').", 400);
+            }
+
+            return [200, $result];
+        } catch (Exception $e) {
+            $code = $e->getCode() >= 400 ? $e->getCode() : 500;
+            return [$code, ['error' => $e->getMessage()]];
+        }
+    }
+
+    private function sendCorsHeaders(): void
+    {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: POST, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type, X-Thunderbird-Token');
+        header('Content-Type: application/json');
+    }
 }
