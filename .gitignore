@@ -1,3 +1,6 @@
 /identifier.sqlite
 /Database/thunderbird.sqlite
 .idea/
+/vendor/
+/.phpunit.result.cache
+/.phpunit.cache/
