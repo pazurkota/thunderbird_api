@@ -1,31 +1,21 @@
 <?php
 
 require_once __DIR__ . '/vendor/autoload.php';
-require_once __DIR__ . '/Service/EnvService.php';
 
-use App\Services\EnvService;
+use App\Api\ResetTokenApi;
+use Dotenv\Dotenv;
 
-if (php_sapi_name() !== 'cli') {
-    die("This script can be used only in terminal.\n");
+if (file_exists(__DIR__ . '/.env')) {
+    Dotenv::createImmutable(__DIR__)->load();
 }
 
-$envPath = __DIR__ . '/.env';
-$envManager = new EnvService($envPath);
+$secretToken = $_ENV['THUNDERBIRD_API_TOKEN'] ?? getenv('THUNDERBIRD_API_TOKEN');
 
-$newToken = bin2hex(random_bytes(16));
-
-try {
-    $envManager->updateKey('THUNDERBIRD_API_TOKEN', $newToken);
-
-    echo "==========================================================\n";
-    echo " SUCCESS: Auth token has been successfully reset!\n";
-    echo "================================================
-    ==========\n";
-    echo "New token: \033[1;32m" . $newToken . "\033[0m\n";
-    echo "New token has been saved into your .env file.\n";
-    echo "Remember to update it in your Thunderbird plugin!\n";
-    echo "==========================================================\n";
-
-} catch (Exception $e) {
-    echo "Error occurred while reset token: " . $e->getMessage() . "\n";
+if (!$secretToken) {
+    http_response_code(500);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Server misconfiguration: THUNDERBIRD_API_TOKEN is not set. Copy .env.example to .env and set it.']);
+    exit;
 }
+
+ResetTokenApi::create($secretToken, __DIR__ . '/.env')->run();

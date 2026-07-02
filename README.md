@@ -21,8 +21,8 @@ The backend is written in PHP and split into layers:
 
 - **Interface/** — repository contracts (`AccountRepositoryInterface`, `MessageRepositoryInterface`)
 - **Repository/** — SQLite (PDO) implementations for accounts and messages
-- **Service/** — API token validation and save orchestration (`AccountSyncService`, `MessageSyncService`)
-- **Api/** — HTTP entry point (routing based on payload shape, CORS handling)
+- **Service/** — API token validation and save orchestration (`AccountSyncService`, `MessageSyncService`, `TokenResetService`, `EnvService`)
+- **Api/** — HTTP entry points (`ThunderbirdApi` routes by payload shape, `ResetTokenApi` rotates the token; both handle CORS)
 - **Database/** — SQLite connection and schema migration (`Database.php`)
 
 ## Features
@@ -69,6 +69,27 @@ The API token must match on both sides of the integration:
   `.env` is gitignored and must never be committed. If `THUNDERBIRD_API_TOKEN` is not set, `api.php` responds with a `500` error instead of falling back to a hardcoded value.
 - **Extension** (`background.js`) → `CONFIG.apiUrl`. The token is no longer hard-coded: `background.js` fetches the extension's own `.env` file at runtime (via `browser.runtime.getURL('.env')`) and reads `THUNDERBIRD_API_TOKEN` from it, so the same `.env` used by the backend also configures the extension. If `.env` is missing or the key is unset, synchronization fails with a clear error instead of falling back to a hardcoded value.
 
+### Resetting the token
+
+`POST /reset_token.php` rotates `THUNDERBIRD_API_TOKEN` and writes the new value back to `.env`. It requires the **current** token in the `X-Thunderbird-Token` header, so only a caller who already holds a valid token can trigger a rotation:
+
+```bash
+curl -X POST http://localhost:8000/reset_token.php \
+  -H "X-Thunderbird-Token: <current token>"
+```
+
+Response:
+```json
+{
+  "status": "success",
+  "message": "Auth token has been reset.",
+  "new_token": "<new token>",
+  "server_time": "2026-07-02 14:00:00"
+}
+```
+
+After a reset, the extension's in-memory token cache is stale until it is reloaded (Thunderbird restart, or "Reload" in Debug Add-ons), since `background.js` only re-reads `.env` once per session.
+
 ## API contract
 
 `POST /api.php`
@@ -110,6 +131,18 @@ Messages payload:
 
 Response (success): `{"status":"success", ...}` with a `200` status code.
 Errors: `401` (invalid token), `400` (invalid payload), `405` (wrong HTTP method).
+
+---
+
+`POST /reset_token.php`
+
+Headers:
+```
+X-Thunderbird-Token: <current token>
+```
+
+Response (success): `{"status":"success", "new_token": "...", ...}` with a `200` status code.
+Errors: `401` (invalid/missing current token), `405` (wrong HTTP method), `500` (server misconfigured, `THUNDERBIRD_API_TOKEN` not set).
 
 ## Database schema
 
