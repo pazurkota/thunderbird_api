@@ -67,7 +67,7 @@ The API token must match on both sides of the integration:
   ```
   Generate a strong token with, e.g.: `php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"`.
   `.env` is gitignored and must never be committed. If `THUNDERBIRD_API_TOKEN` is not set, `api.php` responds with a `500` error instead of falling back to a hardcoded value.
-- **Extension** (`background.js`) → `CONFIG.apiUrl`, `CONFIG.apiToken`. Browser extensions cannot read `.env` files at runtime, so the token has to be copied into `background.js` by hand — set it to the same value as `THUNDERBIRD_API_TOKEN`. Since `background.js` is part of the extension source, treat this token as a shared secret between your own Thunderbird profile and your own backend rather than a value safe to publish in a public repository.
+- **Extension** (`background.js`) → `CONFIG.apiUrl`. The token is no longer hard-coded: `background.js` fetches the extension's own `.env` file at runtime (via `browser.runtime.getURL('.env')`) and reads `THUNDERBIRD_API_TOKEN` from it, so the same `.env` used by the backend also configures the extension. If `.env` is missing or the key is unset, synchronization fails with a clear error instead of falling back to a hardcoded value.
 
 ## API contract
 

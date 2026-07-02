@@ -1,15 +1,39 @@
 const CONFIG = {
     apiUrl: 'http://localhost:8000/api.php',
-    apiToken: 'pazurkota_super_secret_api_key_2026',
     maxMessages: 10
 };
 
+let cachedApiToken = null;
+
+async function getApiToken() {
+    if (cachedApiToken) {
+        return cachedApiToken;
+    }
+
+    const response = await fetch(browser.runtime.getURL('.env'));
+    if (!response.ok) {
+        throw new Error('.env file not found. Copy .env.example to .env and set THUNDERBIRD_API_TOKEN.');
+    }
+
+    const envContent = await response.text();
+    const match = envContent.match(/^THUNDERBIRD_API_TOKEN=(.+)$/m);
+    const token = match?.[1]?.trim();
+
+    if (!token) {
+        throw new Error('THUNDERBIRD_API_TOKEN is not set in .env.');
+    }
+
+    cachedApiToken = token;
+    return cachedApiToken;
+}
+
 async function postToApi(payload) {
+    const apiToken = await getApiToken();
     const response = await fetch(CONFIG.apiUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-Thunderbird-Token': CONFIG.apiToken
+            'X-Thunderbird-Token': apiToken
         },
         body: JSON.stringify(payload)
     });
