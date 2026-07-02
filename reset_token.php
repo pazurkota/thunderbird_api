@@ -15,7 +15,7 @@ $envManager = new EnvService($envPath);
 $newToken = bin2hex(random_bytes(16));
 
 try {
-    $envManager->updateKey('THUNDERBIRD_TOKEN', $newToken);
+    $envManager->updateKey('THUNDERBIRD_API_TOKEN', $newToken);
 
     echo "==========================================================\n";
     echo " SUCCESS: Auth token has been successfully reset!\n";
